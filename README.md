@@ -1,6 +1,6 @@
 # FilePicker
 
-FilePicker is a SwiftUI view modifier that allows you to open a file picker and select a file from the user's device.
+FilePicker is a SwiftUI view modifier that allows you to open a file picker and open or save a file from the user's device.
 
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2F0xWDG%2FFilePicker%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/0xWDG/FilePicker)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2F0xWDG%2FFilePicker%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/0xWDG/FilePicker)
@@ -31,7 +31,7 @@ targets: [
 2. Paste the repository URL (`https://github.com/0xWDG/FilePicker`) and click **Next**.
 3. Click **Finish**.
 
-## Usage
+## Usage (Open file)
 
 ```swift
 import SwiftUI
@@ -65,6 +65,38 @@ struct ContentView: View {
         .onChange(of: $filePickerFiles.wrappedValue) { newValue in
             print(newValue)
         }
+    }
+}
+```
+
+## Usage (Save file)
+
+```swift
+import SwiftUI
+import FilePicker
+
+struct ContentView: View {
+    // MARK: Filepicker
+    @State var filePickerOpen = false
+    var filePickerFileName = "test.txt"
+    var filePickerFileData = var filePickerData = Data("Hello, World!".utf8)
+
+    var body: some View {
+        VStack {
+            Text("Save a file :)")
+                .padding()
+
+            Button("Save", systemImage: "square.and.arrow.up") {
+                filePickerOpen.toggle()
+            }
+        }
+        .padding()
+        .filePicker(
+            isPresented: $filePickerOpen,
+            fileName: filePickerFileName,
+            data: filePickerData,
+            types: [.text]
+        )
     }
 }
 ```

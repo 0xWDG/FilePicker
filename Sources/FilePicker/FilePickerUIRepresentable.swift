@@ -21,6 +21,8 @@ public struct FilePickerUIRepresentable: UIViewControllerRepresentable {
 
     public typealias PickerCompletion = (_ urls: [URL]) -> Void
 
+    public let data: Data?
+    public let fileName: String?
     public let types: [UTType]
     public let allowMultiple: Bool
     public let pickedCompletionHandler: PickerCompletion
@@ -29,8 +31,17 @@ public struct FilePickerUIRepresentable: UIViewControllerRepresentable {
     /// 
     /// - Parameter types: Allowed file types
     /// - Parameter allowMultiple: Allow selecting multiple files
+    /// - Parameter data: Data to save (if empty we're picking files)
     /// - Parameter completionHandler: The completion handler (aka returned items)
-    public init(types: [UTType], allowMultiple: Bool, onPicked completionHandler: @escaping PickerCompletion) {
+    public init(
+        types: [UTType],
+        allowMultiple: Bool,
+        fileName: String?,
+        data: Data?,
+        onPicked completionHandler: @escaping PickerCompletion
+    ) {
+        self.data = data
+        self.fileName = fileName
         self.types = types
         self.allowMultiple = allowMultiple
         self.pickedCompletionHandler = completionHandler
@@ -41,9 +52,31 @@ public struct FilePickerUIRepresentable: UIViewControllerRepresentable {
     }
 
     public func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
+        var picker: UIDocumentPickerViewController
+
+        if let data {
+            var tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
+
+            if let fileName {
+                tempURL = tempURL.appendingPathComponent(fileName)
+            } else {
+                tempURL = tempURL
+                    .appendingPathComponent("File")
+                    .appendingPathExtension(types.first?.preferredFilenameExtension ?? "tmp")
+            }
+
+            do {
+                try data.write(to: tempURL)
+                picker = UIDocumentPickerViewController(forExporting: [tempURL])
+            } catch {
+                fatalError("Failed to write data to temp file: \(error)")
+            }
+        } else {
+            picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
+            picker.allowsMultipleSelection = allowMultiple
+        }
+
         picker.delegate = context.coordinator
-        picker.allowsMultipleSelection = allowMultiple
         return picker
     }
 
@@ -63,4 +96,5 @@ public struct FilePickerUIRepresentable: UIViewControllerRepresentable {
     }
 }
 
+// FPExport
 #endif
