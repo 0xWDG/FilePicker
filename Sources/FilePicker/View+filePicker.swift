@@ -147,7 +147,7 @@ extension View {
 #if os(macOS)
             ProgressView()
                 .task {
-                    let status = await withCheckedContinuation { continuation in
+                    _ = await withCheckedContinuation { continuation in
                         let panel = NSSavePanel()
                         panel.nameFieldStringValue = fileName
                         panel.allowedContentTypes = types
