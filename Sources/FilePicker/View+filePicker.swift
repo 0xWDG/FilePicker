@@ -147,13 +147,23 @@ extension View {
 #if os(macOS)
             ProgressView()
                 .task {
-                    _ = await withCheckedContinuation { continuation in
+                    let status = await withCheckedContinuation { continuation in
                         let panel = NSSavePanel()
                         panel.nameFieldStringValue = fileName
                         panel.allowedContentTypes = types
                         panel.begin { reponse in
                             if reponse == .OK {
-                                continuation.resume(returning: true)
+                                if let url = panel.url {
+                                    do {
+                                        try data.write(to: url)
+                                        continuation.resume(returning: true)
+                                    } catch {
+                                        print("Error", error)
+                                        continuation.resume(returning: false)
+                                    }
+                                } else {
+                                    continuation.resume(returning: false)
+                                }
                             } else {
                                 continuation.resume(returning: false)
                             }
