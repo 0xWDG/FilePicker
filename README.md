@@ -79,7 +79,7 @@ struct ContentView: View {
     // MARK: Filepicker
     @State var filePickerOpen = false
     var filePickerFileName = "test.txt"
-    var filePickerFileData = var filePickerData = Data("Hello, World!".utf8)
+    var filePickerData = Data("Hello, World!".utf8)
 
     var body: some View {
         VStack {
