@@ -9,9 +9,10 @@
 //  MIT License
 //
 
-#if canImport(Testing)
+#if canImport(Testing) && canImport(UniformTypeIdentifiers)
 import Foundation
 import Testing
+import UniformTypeIdentifiers
 @testable import FilePicker
 
 @Test func temporaryFileSanitizesFileNameAndWritesData() throws {
