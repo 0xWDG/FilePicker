@@ -9,10 +9,10 @@ FilePicker is a SwiftUI view modifier that allows you to open a file picker and 
 
 ## Requirements
 
-- Swift 5.9+ (Xcode 15+)
+- Swift 5.8+ (Xcode 14.3+)
 - iOS 15+, macOS 12+
 
-## Installation (Pakage.swift)
+## Installation (Package.swift)
 
 ```swift
 dependencies: [
@@ -59,8 +59,8 @@ struct ContentView: View {
         .filePicker(
             isPresented: $filePickerOpen,
             files: $filePickerFiles,
-            types: [.json, .text], // Optional (default: .json)
-            allowsMultipleSelection: false // Optional (default: false)
+            types: [.json, .text], // Optional (default: .text)
+            allowMultiple: false // Optional (default: false)
         )
         .onChange(of: $filePickerFiles.wrappedValue) { newValue in
             print(newValue)

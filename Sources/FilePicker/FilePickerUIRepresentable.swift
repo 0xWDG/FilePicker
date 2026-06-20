@@ -17,15 +17,18 @@ import UniformTypeIdentifiers
 ///
 /// This is a wrapper for `UIDocumentPickerViewController`
 public struct FilePickerUIRepresentable: UIViewControllerRepresentable {
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) private var dismiss
 
     public typealias PickerCompletion = (_ urls: [URL]) -> Void
+    public typealias ErrorCompletion = (_ error: Error) -> Void
 
     public let data: Data?
     public let fileName: String?
     public let types: [UTType]
     public let allowMultiple: Bool
     public let pickedCompletionHandler: PickerCompletion
+    public let cancellationHandler: () -> Void
+    public let errorCompletionHandler: ErrorCompletion
 
     /// Initialize FilePickerUIRepresentable
     /// 
@@ -38,13 +41,17 @@ public struct FilePickerUIRepresentable: UIViewControllerRepresentable {
         allowMultiple: Bool,
         fileName: String?,
         data: Data?,
-        onPicked completionHandler: @escaping PickerCompletion
+        onPicked completionHandler: @escaping PickerCompletion,
+        onCancel cancellationHandler: @escaping () -> Void = {},
+        onError errorCompletionHandler: @escaping ErrorCompletion = { _ in }
     ) {
         self.data = data
         self.fileName = fileName
         self.types = types
         self.allowMultiple = allowMultiple
         self.pickedCompletionHandler = completionHandler
+        self.cancellationHandler = cancellationHandler
+        self.errorCompletionHandler = errorCompletionHandler
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -55,24 +62,19 @@ public struct FilePickerUIRepresentable: UIViewControllerRepresentable {
         var picker: UIDocumentPickerViewController
 
         if let data {
-            var tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
-
-            if let fileName {
-                tempURL = tempURL.appendingPathComponent(fileName)
-            } else {
-                tempURL = tempURL
-                    .appendingPathComponent("File")
-                    .appendingPathExtension(types.first?.preferredFilenameExtension ?? "tmp")
-            }
-
             do {
-                try data.write(to: tempURL)
-                picker = UIDocumentPickerViewController(forExporting: [tempURL])
+                let temporaryFile = try FilePickerTemporaryFile(data: data, fileName: fileName, types: types)
+                context.coordinator.temporaryFile = temporaryFile
+                picker = UIDocumentPickerViewController(forExporting: [temporaryFile.url])
             } catch {
-                fatalError("Failed to write data to temp file: \(error)")
+                context.coordinator.report(error: error)
+                picker = UIDocumentPickerViewController(forOpeningContentTypes: [.data], asCopy: true)
             }
         } else {
-            picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
+            picker = UIDocumentPickerViewController(
+                forOpeningContentTypes: types.isEmpty ? [.data] : types,
+                asCopy: true
+            )
             picker.allowsMultipleSelection = allowMultiple
         }
 
@@ -80,18 +82,47 @@ public struct FilePickerUIRepresentable: UIViewControllerRepresentable {
         return picker
     }
 
-    public func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {}
+    public func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {
+        context.coordinator.parent = self
+    }
 
     public class Coordinator: NSObject, UIDocumentPickerDelegate {
         var parent: FilePickerUIRepresentable
+        var temporaryFile: FilePickerTemporaryFile?
 
         init(parent: FilePickerUIRepresentable) {
             self.parent = parent
         }
 
+        deinit {
+            temporaryFile?.remove()
+        }
+
         public func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             parent.pickedCompletionHandler(urls)
-            parent.presentationMode.wrappedValue.dismiss()
+            finish()
+        }
+
+        public func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            parent.cancellationHandler()
+            finish()
+        }
+
+        func report(error: Error) {
+            DispatchQueue.main.async { [weak self] in
+                guard let self else {
+                    return
+                }
+
+                parent.errorCompletionHandler(error)
+                finish()
+            }
+        }
+
+        private func finish() {
+            temporaryFile?.remove()
+            temporaryFile = nil
+            parent.dismiss()
         }
     }
 }
