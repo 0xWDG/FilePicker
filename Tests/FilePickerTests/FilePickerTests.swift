@@ -9,11 +9,40 @@
 //  MIT License
 //
 
-#if canImport(Testing)
+#if canImport(Testing) && canImport(UniformTypeIdentifiers)
+import Foundation
 import Testing
+import UniformTypeIdentifiers
 @testable import FilePicker
 
-@Test func example() async throws {
-    // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+@Test func temporaryFileSanitizesFileNameAndWritesData() throws {
+    let data = Data("FilePicker".utf8)
+    let temporaryFile = try FilePickerTemporaryFile(
+        data: data,
+        fileName: "../unsafe.txt",
+        types: [.text]
+    )
+    defer {
+        temporaryFile.remove()
+    }
+
+    #expect(temporaryFile.url.lastPathComponent == "unsafe.txt")
+    #expect(try Data(contentsOf: temporaryFile.url) == data)
+}
+
+@Test func temporaryFileUsesPreferredExtensionAndRemovesDirectory() throws {
+    let temporaryFile = try FilePickerTemporaryFile(
+        data: Data(),
+        fileName: nil,
+        types: [.plainText]
+    )
+    let directoryURL = temporaryFile.url.deletingLastPathComponent()
+
+    #expect(temporaryFile.url.pathExtension == "txt")
+    #expect(FileManager.default.fileExists(atPath: directoryURL.path))
+
+    temporaryFile.remove()
+
+    #expect(!FileManager.default.fileExists(atPath: directoryURL.path))
 }
 #endif
